@@ -32,7 +32,7 @@ Studio kurulu değilse Fisoku panelinde bir kurulum sihirbazı açılır:
 ## Kullanım
 
 1. AugeLab Studio'yu açın.
-2. `Fisoku.exe`'yi çift tıklayın. Bilgisayarda Fisoku paneli açılır.
+2. `Fisoku.exe`'yi [son sürümden](https://github.com/lyunusl/fisoku/releases/latest) indirip çift tıklayın. Bilgisayarda Fisoku paneli açılır.
 3. Windows güvenlik duvarı sorarsa **Özel ağlar** için izin verin (telefonun bağlanabilmesi için).
 4. Paneldeki QR kodu telefonun kamerasıyla okutun ve **Fiş çek**'e basın.
 5. Okunan fişler panelde listelenir:
