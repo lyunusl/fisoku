@@ -2,6 +2,19 @@
 
 Fişi telefonla çek, bilgisayarındaki **AugeLab Studio** okusun: tarih, VKN, KDV oranları, matrah ve toplam otomatik ayıklanır, tutarlar birbiriyle kontrol edilir, fişler gün ve ay bazında arşivlenir, dönem dökümü Excel ya da PDF olarak indirilir.
 
+<p align="center">
+  <a href="https://github.com/lyunusl/fisoku/releases/latest/download/Fisoku.exe">
+    <img src="https://img.shields.io/badge/Windows%20i%C3%A7in%20indir-Fisoku.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows için indir: Fisoku.exe" height="56">
+  </a>
+  <br>
+  <sub><b>Ücretsiz</b> · Windows 10/11 (64 bit) · Kurulum ve Python gerekmez · <a href="https://github.com/lyunusl/fisoku/releases/latest">Sürüm notları</a></sub>
+</p>
+
+> **İndirdikten sonra:** `Fisoku.exe`'yi çift tıklayın. AugeLab Studio bilgisayarınızda yoksa Fisoku onu sizin için adım adım kurar.
+> Windows "tanınmayan uygulama" uyarısı verirse **Ek bilgi → Yine de çalıştır**'a basın (exe imzalı değil).
+>
+> macOS / Linux: hazır sürüm yok; [kaynak koddan](#geliştirme) çalıştırılabilir, ama OCR için AugeLab Studio gerekir.
+
 Her şey kendi bilgisayarında çalışır. Fişler buluta gönderilmez.
 
 ```
