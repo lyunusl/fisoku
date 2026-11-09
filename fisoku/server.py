@@ -19,7 +19,8 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from PIL import Image, ImageOps
 
 from . import __version__
-from .export import to_xlsx
+from . import period
+from .export import to_pdf, to_xlsx, to_zip
 from .receipt import UNVERIFIED_NOTE, Receipt, fill_bases, merge, parse, validate
 from .store import Store
 from .studio import DEFAULT_URL, VARIANTS, StudioError, StudioOCR, StudioUnavailable
@@ -302,15 +303,39 @@ def create_app(store: Store, worker: Worker, port: int, setup: StudioSetup | Non
         store.delete(rid)
         return {"ok": True}
 
-    @app.get("/api/export.xlsx")
-    def export(req: Request):
+    @app.get("/api/archive")
+    def archive_view(req: Request):
         require(req)
-        data = to_xlsx(store.all())
-        return Response(
-            data,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="fisler_{date.today():%Y-%m-%d}.xlsx"'},
-        )
+        return period.archive(store.all())
+
+    def _period(req: Request, day: str | None, month: str | None):
+        require(req)
+        try:
+            day, month = period.check_period(day, month)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
+        recs = period.select(store.all(), day, month)
+        return recs, period.slug(day, month), period.label(day, month)
+
+    def _download(data: bytes, name: str, media: str) -> Response:
+        return Response(data, media_type=media, headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    # ?day=YYYY-MM-DD or ?month=YYYY-MM; neither = every receipt.
+    @app.get("/api/export.xlsx")
+    def export_xlsx(req: Request, day: str | None = None, month: str | None = None):
+        recs, name, title = _period(req, day, month)
+        return _download(to_xlsx(recs, title), f"{name}.xlsx",
+                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    @app.get("/api/export.pdf")
+    def export_pdf(req: Request, day: str | None = None, month: str | None = None):
+        recs, name, title = _period(req, day, month)
+        return _download(to_pdf(recs, title), f"{name}.pdf", "application/pdf")
+
+    @app.get("/api/export.zip")
+    def export_zip(req: Request, day: str | None = None, month: str | None = None):
+        recs, name, title = _period(req, day, month)
+        return _download(to_zip(recs, store.photos, name, title), f"{name}.zip", "application/zip")
 
     @app.exception_handler(HTTPException)
     async def http_error(_req: Request, exc: HTTPException):

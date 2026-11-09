@@ -92,6 +92,23 @@
   @keyframes nudge { 50% { transform:translate(-50%, 5px); } }
   .acct-head .links { display:flex; gap:14px; }
   .acct-head button.linkbtn { border:0; background:none; color:var(--brand); font:inherit; cursor:pointer; padding:0; text-decoration:underline; }
+  .period { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 0 12px; border-top:1px solid var(--line); margin-bottom:6px; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+  .seg button { border:0; background:var(--card); color:var(--ink); padding:7px 12px; font:inherit; cursor:pointer; }
+  .seg button + button { border-left:1px solid var(--line); }
+  .seg button.on { background:var(--brand); color:#fff; font-weight:600; }
+  .period input { padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); font:inherit; }
+  .period .ptitle { font-weight:600; }
+  .period .dl { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+  .arch h2 { font-size:15px; margin:0 0 8px; }
+  .arch .m, .arch .d { display:flex; justify-content:space-between; gap:8px; width:100%; border:0; background:none; color:var(--ink);
+                      font:inherit; text-align:left; padding:6px 8px; border-radius:7px; cursor:pointer; }
+  .arch .m:hover, .arch .d:hover { background:color-mix(in srgb, var(--brand) 8%, transparent); }
+  .arch .m.on, .arch .d.on { background:color-mix(in srgb, var(--brand) 16%, transparent); }
+  .arch .m b { font-weight:600; } .arch small { color:var(--mute); white-space:nowrap; }
+  .arch .days { margin:0 0 6px 12px; border-left:2px solid var(--line); padding-left:4px; }
+  .arch .d { font-size:13px; padding:4px 8px; }
+  .arch .none { color:var(--mute); font-size:13px; }
 </style>
 </head>
 <body>
@@ -109,6 +126,10 @@
       <input id="files" type="file" accept="image/*" multiple hidden>
       <p class="hint">İlk açılışta Windows güvenlik duvarı izin sorarsa “Özel ağlar”a izin verin; yoksa telefon bağlanamaz.</p>
     </div>
+    <div class="card arch" style="margin-top:20px">
+      <h2>Arşiv</h2>
+      <div id="arch"><p class="none">Henüz fiş yok.</p></div>
+    </div>
   </aside>
 
   <main class="card">
@@ -119,7 +140,17 @@
         <div><b id="svat">0,00 ₺</b><span>toplam KDV</span></div>
         <div><b id="stot">0,00 ₺</b><span>toplam tutar</span></div>
       </div>
-      <a class="btn primary" href="/api/export.xlsx">⬇ Excel'e aktar</a>
+    </div>
+    <div class="period">
+      <div class="seg" id="pseg"><button data-k="all">Tümü</button><button data-k="month">Ay</button><button data-k="day">Gün</button></div>
+      <input type="month" id="pmonth" title="Ay seçin">
+      <input type="date" id="pday" title="Gün seçin">
+      <span class="ptitle" id="ptitle">Tüm fişler</span>
+      <div class="dl">
+        <a class="btn primary" id="dxlsx" title="Seçili dönemin Excel dökümü">⬇ Excel</a>
+        <a class="btn" id="dpdf" title="Seçili dönemin yazdırılabilir PDF dökümü">⬇ PDF</a>
+        <a class="btn" id="dzip" title="Excel, PDF ve fiş fotoğrafları tek dosyada">⬇ Arşiv (.zip)</a>
+      </div>
     </div>
     <table>
       <thead><tr><th></th><th>Tarih</th><th>Satıcı</th><th>VKN/TCKN</th><th class="num">KDV</th><th class="num">Toplam</th><th>Durum</th></tr></thead>
@@ -186,9 +217,69 @@ function tag(r) {
   return r.status === "ok" ? ["ok", "✓ Tamam"] : ["review", "Kontrol et"];
 }
 
+// ---- Day / month archive. A receipt is filed under the date printed on it, or under the
+// day it was photographed while that date is unknown (same rule as the server).
+const MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+const pad = (n) => String(n).padStart(2, "0");
+const now = new Date();
+let per = { kind: "all", month: `${now.getFullYear()}-${pad(now.getMonth() + 1)}`, day: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` };
+try { Object.assign(per, JSON.parse(localStorage.getItem("fisoku.period") || "{}")); } catch {}
+function recDay(r) {
+  const d = (r.data || {}).date || "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d)) ? d : (r.created_at || "").slice(0, 10);
+}
+function inPeriod(r) {
+  if (per.kind === "day") return recDay(r) === per.day;
+  if (per.kind === "month") return recDay(r).startsWith(per.month + "-");
+  return true;
+}
+function perLabel() {
+  if (per.kind === "day") { const [y, m, d] = per.day.split("-").map(Number); return `${d} ${MONTHS[m - 1]} ${y}`; }
+  if (per.kind === "month") { const [y, m] = per.month.split("-").map(Number); return `${MONTHS[m - 1]} ${y}`; }
+  return "Tüm fişler";
+}
+function setPeriod(kind, value) {
+  per.kind = kind;
+  if (kind === "month" && value) per.month = value;
+  if (kind === "day" && value) { per.day = value; per.month = value.slice(0, 7); }
+  try { localStorage.setItem("fisoku.period", JSON.stringify(per)); } catch {}
+  renderPeriod(); refresh();
+}
+function renderPeriod() {
+  [...$("pseg").children].forEach((b) => b.classList.toggle("on", b.dataset.k === per.kind));
+  $("pmonth").style.display = per.kind === "month" ? "" : "none";
+  $("pday").style.display = per.kind === "day" ? "" : "none";
+  $("pmonth").value = per.month; $("pday").value = per.day;
+  $("ptitle").textContent = perLabel();
+  const q = per.kind === "day" ? `?day=${per.day}` : per.kind === "month" ? `?month=${per.month}` : "";
+  $("dxlsx").href = "/api/export.xlsx" + q; $("dpdf").href = "/api/export.pdf" + q; $("dzip").href = "/api/export.zip" + q;
+}
+[...$("pseg").children].forEach((b) => b.onclick = () => setPeriod(b.dataset.k));
+$("pmonth").onchange = (e) => e.target.value && setPeriod("month", e.target.value);
+$("pday").onchange = (e) => e.target.value && setPeriod("day", e.target.value);
+let archKey = "";
+function renderArchive(months) {
+  // Redraw only when something changed, so clicks and hover are not interrupted.
+  const key = JSON.stringify([months, per]);
+  if (key === archKey) return;
+  archKey = key;
+  if (!months.length) { $("arch").innerHTML = `<p class="none">Henüz fiş yok.</p>`; return; }
+  $("arch").innerHTML = months.map((m) => {
+    const open = per.kind !== "all" && per.month === m.month;
+    const days = open ? `<div class="days">${m.days.map((d) => `<button class="d ${per.kind === "day" && per.day === d.day ? "on" : ""}" onclick="setPeriod('day','${d.day}')">
+        <span>${esc(d.label)}</span><small>${d.count} fiş · ${money(d.total)} ₺</small></button>`).join("")}</div>` : "";
+    return `<button class="m ${per.kind === "month" && per.month === m.month ? "on" : ""}" onclick="setPeriod('month','${m.month}')">
+        <b>${esc(m.label)}</b><small>${m.count} fiş · ${money(m.total)} ₺</small></button>${days}`;
+  }).join("");
+}
+renderPeriod();
+
 async function refresh() {
-  const [rs, st] = await Promise.all([fetch("/api/receipts").then((r) => r.json()), fetch("/api/status").then((r) => r.json())]);
-  all = rs; studioUp = st.connected; watchStudio(st.connected);
+  const [everything, st, months] = await Promise.all([fetch("/api/receipts").then((r) => r.json()),
+    fetch("/api/status").then((r) => r.json()), fetch("/api/archive").then((r) => r.json())]);
+  const rs = everything.filter(inPeriod).sort((a, b) => recDay(b).localeCompare(recDay(a)) || b.id - a.id);
+  all = everything; studioUp = st.connected; watchStudio(st.connected);
+  renderArchive(months);
   $("dot").className = "dot " + (st.connected ? "on" : "off");
   $("msg").textContent = (st.connected ? `AugeLab Studio ${st.version || ""} bağlı. ` : "") + (st.message || "") + (st.queue ? ` Sırada: ${st.queue}` : "");
   const done = rs.filter((r) => r.state === "done");
@@ -197,6 +288,7 @@ async function refresh() {
   $("svat").textContent = money(done.reduce((s, r) => s + Number(r.data.total_vat || 0), 0)) + " ₺";
   $("stot").textContent = money(done.reduce((s, r) => s + Number(r.data.total || 0), 0)) + " ₺";
   $("empty").style.display = rs.length ? "none" : "block";
+  $("empty").textContent = everything.length ? `${perLabel()} için fiş yok.` : "Henüz fiş yok. QR kodu telefonla okutup ilk fişi çekin.";
   $("rows").innerHTML = rs.map((r) => {
     const d = r.data || {}, [cls, label] = tag(r);
     return `<tr class="clickable" onclick="openRec(${r.id})">

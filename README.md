@@ -1,6 +1,6 @@
 # Fisoku
 
-Fişi telefonla çek, bilgisayarındaki **AugeLab Studio** okusun: tarih, VKN, KDV oranları, matrah ve toplam otomatik ayıklanır, tutarlar birbiriyle kontrol edilir, sonuç tek tıkla Excel'e aktarılır.
+Fişi telefonla çek, bilgisayarındaki **AugeLab Studio** okusun: tarih, VKN, KDV oranları, matrah ve toplam otomatik ayıklanır, tutarlar birbiriyle kontrol edilir, fişler gün ve ay bazında arşivlenir, dönem dökümü Excel ya da PDF olarak indirilir.
 
 Her şey kendi bilgisayarında çalışır. Fişler buluta gönderilmez.
 
@@ -38,7 +38,10 @@ Studio kurulu değilse Fisoku panelinde bir kurulum sihirbazı açılır:
 5. Okunan fişler panelde listelenir:
    - **✓ Tamam**: tüm tutarlar birbirini tutuyor.
    - **Kontrol et**: bir şey tutmuyor; fişe tıklayıp fotoğrafa bakarak düzeltin.
-6. **Excel'e aktar** ile oran bazında matrah ve KDV dökümünü alın.
+6. **Arşiv ve dökümler**: Fişler, üzerlerindeki tarihe göre aylara ve günlere ayrılır. Tarihi okunamayan fiş, çekildiği güne konur. Yan paneldeki **Arşiv** listesinden ya da tablonun üstündeki *Tümü / Ay / Gün* seçiminden bir dönem seçin. Tablo ve toplamlar o döneme göre değişir; indirme düğmeleri de o dönemin dosyasını verir:
+   - **Excel**: fiş başına oran bazında matrah ve KDV, toplam satırı ve *Özet* sayfası (oranlara ve günlere göre).
+   - **PDF**: yazdırılabilir döküm; oran özeti ve gün dökümü.
+   - **Arşiv (.zip)**: Excel, PDF ve fiş fotoğrafları (`fotograflar/2025-04-07_0012.jpg` gibi) tek dosyada.
 
 Studio kapalıyken çekilen fişler sırada bekler; Studio açılınca kendiliğinden okunur.
 
@@ -142,6 +145,8 @@ py -3.12 -m venv .venv
 | `tools/fetch_engine_deps.py` | Temiz Studio'da olmayan onnxruntime ve shapely'yi (Python 3.12, Windows x64) indirir |
 | `fisoku/layout.py` | OCR kutularından fiş satırlarını yeniden kurar (eğim düzeltme) |
 | `fisoku/receipt.py` | Ayıklama ve doğrulama |
+| `fisoku/period.py` | Gün/ay arşivi: fişin dönemi, arşiv özeti |
+| `fisoku/export.py` | Dönem dökümleri: Excel, PDF, ZIP |
 | `fisoku/server.py` | Yerel sunucu, QR eşleşme, OCR kuyruğu |
 | `fisoku/web/` | Telefon sayfası ve bilgisayar paneli |
 | `tools/make_samples.py` | Sentetik fiş üretir |
@@ -155,4 +160,4 @@ Testler Studio olmadan çalışır; Studio'dan alınmış OCR çıktıları `sam
 
 MIT. AugeLab Studio ayrı, lisanslı bir üründür ve bu depoda yer almaz; Fisoku, Studio ile yalnızca Studio'nun yerel MCP arayüzü üzerinden konuşur.
 
-Exe ile dağıtılan üçüncü parti bileşenler: [RapidOCR](https://github.com/RapidAI/RapidOCR) (Apache-2.0) ve içindeki PaddleOCR PP-OCRv4 modelleri (Apache-2.0), [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT), [Shapely](https://github.com/shapely/shapely) (BSD-3-Clause, GEOS: LGPL-2.1).
+Exe ile dağıtılan üçüncü parti bileşenler: [RapidOCR](https://github.com/RapidAI/RapidOCR) (Apache-2.0) ve içindeki PaddleOCR PP-OCRv4 modelleri (Apache-2.0), [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT), [Shapely](https://github.com/shapely/shapely) (BSD-3-Clause, GEOS: LGPL-2.1), [ReportLab](https://www.reportlab.com/opensource/) (BSD). PDF'lerde Windows'un Arial fontu kullanılır; exe'ye font gömülmez.
