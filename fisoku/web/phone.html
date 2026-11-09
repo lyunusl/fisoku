@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Fisoku</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#0f172a; --mute:#64748b; --line:#e2e8f0;
+          --ok:#15803d; --okbg:#dcfce7; --warn:#a16207; --warnbg:#fef3c7; --err:#b91c1c; --errbg:#fee2e2; --brand:#2563eb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b1120; --card:#111827; --ink:#e5e7eb; --mute:#94a3b8; --line:#1f2937;
+            --okbg:#052e16; --ok:#4ade80; --warnbg:#3a2a05; --warn:#facc15; --errbg:#3b0d0d; --err:#f87171; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--ink);
+         padding: env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom)); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:14px 0 10px; }
+  h1 { font-size:20px; margin:0; letter-spacing:.2px; }
+  #state { font-size:13px; color:var(--mute); text-align:right; max-width:60%; }
+  .shoot { display:block; width:100%; padding:22px; border:0; border-radius:16px; background:var(--brand); color:#fff;
+           font-size:19px; font-weight:600; margin:6px 0 10px; }
+  .pick { display:block; width:100%; padding:13px; border:1px solid var(--line); border-radius:12px; background:var(--card);
+          color:var(--ink); font-size:15px; }
+  input[type=file] { display:none; }
+  #progress { height:4px; background:var(--line); border-radius:2px; margin:12px 0 4px; overflow:hidden; visibility:hidden; }
+  #bar { height:100%; width:0; background:var(--brand); transition:width .2s; }
+  ul { list-style:none; padding:0; margin:14px 0 0; }
+  li { display:flex; gap:12px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:12px;
+       padding:10px; margin-bottom:8px; }
+  li img { width:46px; height:60px; object-fit:cover; border-radius:6px; background:var(--line); flex:none; }
+  .meta { flex:1; min-width:0; }
+  .meta b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .meta span { font-size:13px; color:var(--mute); }
+  .tag { font-size:12px; font-weight:600; padding:4px 8px; border-radius:999px; white-space:nowrap; }
+  .ok { color:var(--ok); background:var(--okbg); } .review { color:var(--warn); background:var(--warnbg); }
+  .error { color:var(--err); background:var(--errbg); } .wait { color:var(--mute); background:var(--line); }
+  .empty { text-align:center; color:var(--mute); margin:28px 0; font-size:14px; }
+</style>
+</head>
+<body>
+<header><h1>Fisoku</h1><div id="state">Bağlanıyor…</div></header>
+
+<button class="shoot" onclick="cam.click()">📷 Fiş çek</button>
+<button class="pick" onclick="gal.click()">Galeriden seç</button>
+<input id="cam" type="file" accept="image/*" capture="environment">
+<input id="gal" type="file" accept="image/*" multiple>
+<div id="progress"><div id="bar"></div></div>
+
+<ul id="list"></ul>
+<div id="empty" class="empty">Fişi düz bir yüzeye koyup yukarıdan çekin. Okunan fişler burada görünür, Excel'i bilgisayardan alırsınız.</div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const H = { "X-Fisoku-Token": TOKEN };
+const $ = (id) => document.getElementById(id);
+
+async function shrink(file) {
+  // Phones shoot 12+ MP; 2000 px is plenty for OCR and uploads ~10x faster.
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise((ok) => c.toBlob((b) => ok(b || file), "image/jpeg", 0.93));
+  } catch { return file; }
+}
+
+function send(files) {
+  if (!files.length) return;
+  const p = $("progress"), bar = $("bar");
+  p.style.visibility = "visible"; bar.style.width = "5%";
+  Promise.all([...files].map(shrink)).then((blobs) => {
+    const fd = new FormData();
+    blobs.forEach((b, i) => fd.append("files", b, `fis_${Date.now()}_${i}.jpg`));
+    const x = new XMLHttpRequest();
+    x.open("POST", "/api/upload");
+    x.setRequestHeader("X-Fisoku-Token", TOKEN);
+    x.upload.onprogress = (e) => { if (e.lengthComputable) bar.style.width = (5 + 95 * e.loaded / e.total) + "%"; };
+    x.onload = () => { setTimeout(() => (p.style.visibility = "hidden"), 400);
+      if (x.status !== 200) alert("Yüklenemedi: " + x.responseText); refresh(); };
+    x.onerror = () => { p.style.visibility = "hidden"; alert("Bilgisayara ulaşılamadı. Aynı Wi-Fi'de misiniz?"); };
+    x.send(fd);
+  });
+}
+$("cam").onchange = (e) => { send(e.target.files); e.target.value = ""; };
+$("gal").onchange = (e) => { send(e.target.files); e.target.value = ""; };
+
+const money = (v) => v ? Number(v).toLocaleString("tr-TR", { minimumFractionDigits: 2 }) + " ₺" : "";
+let studioUp = true;
+function tag(r) {
+  if (r.state === "queued") return ["wait", studioUp ? "Sırada" : "Studio bekleniyor"];
+  if (r.state === "processing") return ["wait", "Okunuyor…"];
+  if (r.state === "error") return ["error", "Hata"];
+  return r.status === "ok" ? ["ok", "✓ Tamam"] : ["review", "Kontrol et"];
+}
+
+async function refresh() {
+  try {
+    const [rs, st] = await Promise.all([
+      fetch("/api/receipts", { headers: H }).then((r) => r.json()),
+      fetch("/api/status", { headers: H }).then((r) => r.json()),
+    ]);
+    studioUp = st.connected;
+    $("state").textContent = st.connected ? (st.busy ? "Okunuyor…" : "Bağlı ✓") : "Studio kapalı, fişler sırada bekliyor";
+    $("empty").style.display = rs.length ? "none" : "block";
+    $("list").innerHTML = rs.slice(0, 30).map((r) => {
+      const [cls, label] = tag(r), d = r.data || {};
+      const title = d.seller_name || (r.state === "done" ? "Satıcı okunamadı" : "Fiş #" + r.id);
+      const day = d.date ? d.date.split("-").reverse().join(".") : "";
+      const sub = r.state === "error" ? r.error : [day, money(d.total)].filter(Boolean).join(" · ");
+      return `<li><img loading="lazy" src="/api/receipts/${r.id}/photo?t=${TOKEN}" alt="">
+        <div class="meta"><b>${esc(title)}</b><span>${esc(sub || "")}</span></div>
+        <span class="tag ${cls}">${label}</span></li>`;
+    }).join("");
+  } catch { $("state").textContent = "Bilgisayara ulaşılamıyor"; }
+}
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+refresh(); setInterval(refresh, 2500);
+</script>
+</body>
+</html>

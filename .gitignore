@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+*.spec
+packaging/fisoku.ico
+.studio_scene.json
+.dev/

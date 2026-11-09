@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fisoku</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#0f172a; --mute:#64748b; --line:#e2e8f0; --brand:#2563eb;
+          --ok:#15803d; --okbg:#dcfce7; --warn:#a16207; --warnbg:#fef3c7; --err:#b91c1c; --errbg:#fee2e2; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b1120; --card:#111827; --ink:#e5e7eb; --mute:#94a3b8; --line:#1f2937;
+            --okbg:#052e16; --ok:#4ade80; --warnbg:#3a2a05; --warn:#facc15; --errbg:#3b0d0d; --err:#f87171; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { display:grid; grid-template-columns: 300px 1fr; gap:20px; padding:20px; max-width:1400px; margin:0 auto; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  h1 { font-size:22px; margin:0 0 2px; } .sub { color:var(--mute); margin:0 0 14px; }
+  #qr { background:#fff; border-radius:10px; padding:8px; display:flex; justify-content:center; }
+  #qr svg { width:100%; height:auto; max-width:240px; }
+  #url { font:12px ui-monospace, Consolas, monospace; word-break:break-all; color:var(--mute); margin:8px 0 0; }
+  .status { display:flex; gap:8px; align-items:flex-start; margin-top:14px; font-size:13px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:var(--mute); flex:none; margin-top:4px; }
+  .dot.on { background:var(--ok); } .dot.off { background:var(--err); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid var(--line); background:var(--card);
+         color:var(--ink); padding:8px 12px; border-radius:9px; cursor:pointer; font:inherit; text-decoration:none; }
+  .btn.primary { background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600; }
+  .btn.small { padding:4px 8px; font-size:12px; }
+  .drop { border:2px dashed var(--line); border-radius:12px; padding:14px; text-align:center; color:var(--mute); margin-top:14px; cursor:pointer; }
+  .drop.hover { border-color:var(--brand); color:var(--brand); }
+  .hint { font-size:12px; color:var(--mute); margin-top:12px; }
+  .top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .stats { display:flex; gap:18px; flex-wrap:wrap; } .stats div b { display:block; font-size:18px; }
+  .stats div span { color:var(--mute); font-size:12px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:8px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { font-size:12px; color:var(--mute); font-weight:600; }
+  td.num, th.num { text-align:right; font-variant-numeric: tabular-nums; }
+  td img { width:38px; height:50px; object-fit:cover; border-radius:5px; background:var(--line); display:block; }
+  tr.clickable { cursor:pointer; } tr.clickable:hover td { background:color-mix(in srgb, var(--brand) 6%, transparent); }
+  .tag { font-size:12px; font-weight:600; padding:3px 8px; border-radius:999px; white-space:nowrap; }
+  .ok { color:var(--ok); background:var(--okbg); } .review { color:var(--warn); background:var(--warnbg); }
+  .error { color:var(--err); background:var(--errbg); } .wait { color:var(--mute); background:var(--line); }
+  .empty { text-align:center; color:var(--mute); padding:40px 0; }
+  dialog { border:0; border-radius:14px; padding:0; width:min(980px, 96vw); background:var(--card); color:var(--ink); }
+  dialog::backdrop { background:rgba(15,23,42,.55); }
+  .dlg { display:grid; grid-template-columns: 1fr 1fr; gap:18px; padding:18px; }
+  @media (max-width: 760px) { .dlg { grid-template-columns:1fr; } }
+  .dlg img { width:100%; max-height:72vh; object-fit:contain; background:var(--bg); border-radius:10px; }
+  .form label { display:block; font-size:12px; color:var(--mute); margin:8px 0 3px; }
+  .form input { width:100%; padding:7px 9px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); font:inherit; }
+  .grid3 { display:grid; grid-template-columns: 60px 1fr 1fr; gap:6px; align-items:center; }
+  .grid3 b { font-size:12px; color:var(--mute); font-weight:600; }
+  .problems { margin:12px 0 0; padding:10px 12px; border-radius:10px; background:var(--warnbg); color:var(--warn); font-size:13px; }
+  .problems.none { background:var(--okbg); color:var(--ok); }
+  details { margin-top:10px; } pre { white-space:pre-wrap; font-size:12px; background:var(--bg); padding:10px; border-radius:8px; max-height:180px; overflow:auto; }
+  .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; flex-wrap:wrap; }
+  .wiz { width:min(620px, 94vw); }
+  .wiz .in { padding:22px 24px; }
+  .steps { display:flex; gap:6px; margin:0 0 18px; padding:0; list-style:none; counter-reset:s; }
+  .steps li { flex:1; font-size:12px; color:var(--mute); border-top:3px solid var(--line); padding-top:6px; counter-increment:s; }
+  .steps li::before { content:counter(s) ". "; }
+  .steps li.cur { color:var(--brand); border-color:var(--brand); font-weight:600; }
+  .steps li.done { color:var(--ok); border-color:var(--ok); }
+  .steps li.done::before { content:"✓ "; }
+  .wiz h2 { font-size:19px; margin:0 0 8px; } .wiz p { margin:0 0 10px; }
+  .wiz ol.todo { margin:6px 0 12px; padding-left:20px; } .wiz ol.todo li { margin:6px 0; }
+  .wiz kbd { font:12px ui-monospace, Consolas, monospace; background:var(--bg); border:1px solid var(--line); border-radius:5px; padding:1px 5px; }
+  .bar { height:8px; background:var(--line); border-radius:99px; overflow:hidden; margin:10px 0 4px; }
+  .bar i { display:block; height:100%; width:0; background:var(--brand); transition:width .3s; }
+  .wait-line { display:flex; align-items:center; gap:8px; color:var(--mute); font-size:13px; }
+  .spin { width:14px; height:14px; border:2px solid var(--line); border-top-color:var(--brand); border-radius:50%; animation:sp 1s linear infinite; flex:none; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .wiz { max-height:calc(100vh - 24px); overflow:auto; }
+  .wiz.wide .in { padding:16px 20px; } .wiz.wide h2 { margin-bottom:4px; } .wiz.wide .steps { margin-bottom:12px; }
+  .wiz .err { background:var(--errbg); color:var(--err); padding:8px 10px; border-radius:8px; font-size:13px; }
+  .wiz .foot { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:18px; }
+  .wiz.wide { width:min(980px, 96vw); }
+  .acct { margin-top:14px; }
+  .acct-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:13px; color:var(--mute); margin-bottom:6px; flex-wrap:wrap; }
+  .acct-head b { color:var(--ink); } .acct-head a { color:var(--brand); white-space:nowrap; }
+  /* AugeLab's account page opens with a 370 px logo; the frame starts below it so the sign-up
+     buttons and form are what people see first. "Sayfanın üstü" shows the whole page. */
+  .frame { position:relative; height:min(560px, 54vh); overflow:hidden; border:1px solid var(--line); border-radius:10px; background:#111; }
+  .frame iframe { position:absolute; left:0; top:-370px; width:100%; height:calc(100% + 370px); border:0; display:block; }
+  .frame.full iframe { top:0; height:100%; }
+  .scrollhint { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); pointer-events:none;
+                background:var(--brand); color:#fff; font-size:13px; font-weight:600; padding:7px 14px; border-radius:999px;
+                box-shadow:0 4px 14px rgba(0,0,0,.35); animation:nudge 1.6s ease-in-out infinite; transition:opacity .4s; }
+  .scrollhint.gone { opacity:0; }
+  @keyframes nudge { 50% { transform:translate(-50%, 5px); } }
+  .acct-head .links { display:flex; gap:14px; }
+  .acct-head button.linkbtn { border:0; background:none; color:var(--brand); font:inherit; cursor:pointer; padding:0; text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <div class="card">
+      <h1>Fisoku</h1>
+      <p class="sub">Telefonla çek, AugeLab Studio okusun.</p>
+      <div id="qr"></div>
+      <p id="url"></p>
+      <p class="hint">Telefonun kamerasıyla QR kodu okutun. Telefon ve bilgisayar aynı Wi-Fi ağında olmalı.</p>
+      <div class="status"><span id="dot" class="dot"></span><span id="msg">Bağlanıyor…</span></div>
+      <button id="wizopen" class="btn small" style="margin-top:8px; display:none">AugeLab Studio kurulum sihirbazı</button>
+      <div id="drop" class="drop">Fotoğrafları buraya sürükleyin<br>ya da tıklayıp seçin</div>
+      <input id="files" type="file" accept="image/*" multiple hidden>
+      <p class="hint">İlk açılışta Windows güvenlik duvarı izin sorarsa “Özel ağlar”a izin verin; yoksa telefon bağlanamaz.</p>
+    </div>
+  </aside>
+
+  <main class="card">
+    <div class="top">
+      <div class="stats">
+        <div><b id="n">0</b><span>fiş</span></div>
+        <div><b id="nrev">0</b><span>kontrol bekliyor</span></div>
+        <div><b id="svat">0,00 ₺</b><span>toplam KDV</span></div>
+        <div><b id="stot">0,00 ₺</b><span>toplam tutar</span></div>
+      </div>
+      <a class="btn primary" href="/api/export.xlsx">⬇ Excel'e aktar</a>
+    </div>
+    <table>
+      <thead><tr><th></th><th>Tarih</th><th>Satıcı</th><th>VKN/TCKN</th><th class="num">KDV</th><th class="num">Toplam</th><th>Durum</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="empty" class="empty">Henüz fiş yok. QR kodu telefonla okutup ilk fişi çekin.</div>
+  </main>
+</div>
+
+<dialog id="dlg"><div class="dlg">
+  <div><img id="dimg" alt=""></div>
+  <form class="form" id="form" onsubmit="return false">
+    <label>Satıcı</label><input name="seller_name">
+    <label>VKN / TCKN</label><input name="vkn" inputmode="numeric">
+    <div class="grid3" style="grid-template-columns:1fr 1fr">
+      <div><label>Tarih (YYYY-AA-GG)</label><input name="date"></div>
+      <div><label>Fiş no</label><input name="receipt_no"></div>
+    </div>
+    <label>KDV oranları</label>
+    <div class="grid3"><b>Oran</b><b>Matrah</b><b>KDV</b>
+      <span>%1</span><input name="base_1" disabled><input name="vat_1">
+      <span>%10</span><input name="base_10" disabled><input name="vat_10">
+      <span>%20</span><input name="base_20" disabled><input name="vat_20">
+    </div>
+    <div class="grid3" style="grid-template-columns:1fr 1fr">
+      <div><label>Toplam KDV</label><input name="total_vat"></div>
+      <div><label>Toplam</label><input name="total"></div>
+    </div>
+    <div id="problems" class="problems"></div>
+    <details><summary>OCR metni</summary><pre id="ocr"></pre></details>
+    <div class="actions">
+      <button class="btn small" id="del">Sil</button>
+      <button class="btn small" id="retry">Tekrar oku</button>
+      <button class="btn" id="close">Kapat</button>
+      <button class="btn primary" id="save">Kaydet ve kontrol et</button>
+    </div>
+  </form>
+</div></dialog>
+
+<dialog id="wiz" class="wiz"><div class="in">
+  <ol class="steps"><li>Studio'yu kur</li><li>Studio'yu aç</li><li>Etkinleştir</li><li>Hazır</li></ol>
+  <div id="wbody"></div>
+  <div id="wacct" class="acct" hidden>
+    <div class="acct-head"><span id="wacctmsg"></span><span class="links"><button class="linkbtn" id="wtop" type="button">Sayfanın üstünü göster</button><a id="wacctlink" target="_blank" rel="noopener">Yeni pencerede aç ↗</a></span></div>
+    <div class="frame" id="wframebox"><iframe id="wframe" title="AugeLab hesabı"></iframe><div class="scrollhint" id="wscroll">Formun devamı için çerçevede aşağı kaydırın ↓</div></div>
+  </div>
+  <div class="foot"><button class="btn small" id="wlater">Sonra</button><span id="wact"></span></div>
+</div></dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const money = (v) => (v === "" || v == null) ? "" : Number(v).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let all = [], current = null;
+const trDate = (iso) => (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) ? iso.split("-").reverse().join(".") : (iso || "");
+
+fetch("/api/pairing").then((r) => r.json()).then((p) => { $("qr").innerHTML = p.qr_svg; $("url").textContent = p.url; });
+
+let studioUp = true;
+function tag(r) {
+  if (r.state === "queued") return ["wait", studioUp ? "Sırada" : "Studio bekleniyor"];
+  if (r.state === "processing") return ["wait", "Okunuyor…"];
+  if (r.state === "error") return ["error", "Hata"];
+  return r.status === "ok" ? ["ok", "✓ Tamam"] : ["review", "Kontrol et"];
+}
+
+async function refresh() {
+  const [rs, st] = await Promise.all([fetch("/api/receipts").then((r) => r.json()), fetch("/api/status").then((r) => r.json())]);
+  all = rs; studioUp = st.connected; watchStudio(st.connected);
+  $("dot").className = "dot " + (st.connected ? "on" : "off");
+  $("msg").textContent = (st.connected ? `AugeLab Studio ${st.version || ""} bağlı. ` : "") + (st.message || "") + (st.queue ? ` Sırada: ${st.queue}` : "");
+  const done = rs.filter((r) => r.state === "done");
+  $("n").textContent = rs.length;
+  $("nrev").textContent = rs.filter((r) => r.state === "error" || (r.state === "done" && r.status !== "ok")).length;
+  $("svat").textContent = money(done.reduce((s, r) => s + Number(r.data.total_vat || 0), 0)) + " ₺";
+  $("stot").textContent = money(done.reduce((s, r) => s + Number(r.data.total || 0), 0)) + " ₺";
+  $("empty").style.display = rs.length ? "none" : "block";
+  $("rows").innerHTML = rs.map((r) => {
+    const d = r.data || {}, [cls, label] = tag(r);
+    return `<tr class="clickable" onclick="openRec(${r.id})">
+      <td><img loading="lazy" src="/api/receipts/${r.id}/photo" alt=""></td>
+      <td style="white-space:nowrap">${esc(trDate(d.date))}</td><td>${esc(d.seller_name || (r.state === "error" ? r.error : ""))}</td><td>${esc(d.vkn)}</td>
+      <td class="num">${money(d.total_vat)}</td><td class="num">${money(d.total)}</td>
+      <td><span class="tag ${cls}">${label}</span></td></tr>`;
+  }).join("");
+}
+
+function openRec(id) {
+  current = all.find((r) => r.id === id); if (!current) return;
+  const d = current.data || {}, f = $("form");
+  $("dimg").src = `/api/receipts/${id}/photo`;
+  for (const k of ["seller_name", "vkn", "date", "receipt_no", "total", "total_vat"]) f[k].value = d[k] || "";
+  for (const r of ["1", "10", "20"]) { f["vat_" + r].value = (d.vat_by_rate || {})[r] || ""; f["base_" + r].value = (d.base_by_rate || {})[r] || ""; }
+  showProblems(current);
+  $("ocr").textContent = current.ocr_text || current.error || "";
+  $("dlg").showModal();
+}
+function showProblems(r) {
+  const p = $("problems");
+  if (r.state === "error") { p.className = "problems"; p.textContent = r.error; return; }
+  p.className = "problems" + (r.problems.length ? "" : " none");
+  p.innerHTML = r.problems.length ? r.problems.map(esc).join("<br>") : "✓ Tüm tutarlar birbirini tutuyor.";
+}
+// "1.491,20" (Turkish) or "1491.20" -> "1491.20"
+const num = (s) => { s = s.trim().replace(/\s|₺/g, ""); return s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s; };
+$("save").onclick = async () => {
+  const f = $("form"), vat = {};
+  for (const r of ["1", "10", "20"]) if (f["vat_" + r].value.trim()) vat[r] = num(f["vat_" + r].value);
+  const body = { vat_by_rate: vat };
+  for (const k of ["seller_name", "vkn", "date", "receipt_no"]) body[k] = f[k].value.trim();
+  for (const k of ["total", "total_vat"]) body[k] = num(f[k].value);
+  const r = await fetch(`/api/receipts/${current.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((x) => x.json());
+  current = r; showProblems(r);
+  for (const k of ["1", "10", "20"]) f["base_" + k].value = (r.data.base_by_rate || {})[k] || "";
+  refresh();
+};
+$("retry").onclick = async () => { await fetch(`/api/receipts/${current.id}/retry`, { method: "POST" }); $("dlg").close(); refresh(); };
+$("del").onclick = async () => { if (!confirm("Bu fiş ve fotoğrafı silinsin mi?")) return; await fetch(`/api/receipts/${current.id}`, { method: "DELETE" }); $("dlg").close(); refresh(); };
+$("close").onclick = () => $("dlg").close();
+
+function upload(files) {
+  if (!files.length) return;
+  const fd = new FormData(); [...files].forEach((f) => fd.append("files", f));
+  fetch("/api/upload", { method: "POST", body: fd }).then(refresh);
+}
+const drop = $("drop");
+drop.onclick = () => $("files").click();
+$("files").onchange = (e) => { upload(e.target.files); e.target.value = ""; };
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("hover"); };
+drop.ondragleave = () => drop.classList.remove("hover");
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("hover"); upload(e.dataTransfer.files); };
+
+// ---- AugeLab Studio setup wizard: shown while Fisoku cannot reach Studio.
+let wizDismissed = false, offline = 0, setupTimer = null, step2Since = 0;
+const mb = (b) => (b / 1048576).toFixed(1).replace(".", ",");
+function wizStep(s) {
+  if (s.connected) return 3;
+  // Studio's files appear long before the installer is done: stay on step 1 until it is.
+  if (!s.installed || ["downloading", "vcredist", "installing", "manual"].includes(s.phase)) return 0;
+  return s.running ? 2 : 1;
+}
+const ACCOUNT = "https://account.augelab.com/";
+// AugeLab's own account page inside the wizard: sign up while Studio downloads and installs,
+// then come back to it for the licence code. The frame keeps its page across re-renders.
+function renderAccount(step, s) {
+  const during = step === 0 && ["downloading", "vcredist", "installing", "manual"].includes(s.phase);
+  const show = s.supported && (during || step === 2);
+  $("wacct").hidden = !show;
+  $("wiz").classList.toggle("wide", show);
+  if (!show) return;
+  const url = step === 2 ? ACCOUNT : ACCOUNT + "?p=signup";
+  if ($("wframe").dataset.url !== url) {
+    $("wframe").src = url; $("wframe").dataset.url = url;
+    $("wframebox").classList.remove("full"); $("wtop").textContent = "Sayfanın üstünü göster";
+    $("wscroll").classList.remove("gone");
+  }
+  $("wacctlink").href = url;
+  $("wacctmsg").innerHTML = step === 2
+    ? "<b>Lisans kodunuz AugeLab hesabınızda.</b> Giriş yapıp kodu Studio'ya girin."
+    : "<b>Kurulum sürerken AugeLab hesabınızı oluşturun.</b> Studio'yu etkinleştirmek için gerekli.";
+}
+$("wtop").onclick = () => {
+  const full = $("wframebox").classList.toggle("full");
+  $("wtop").textContent = full ? "Formu öne getir" : "Sayfanın üstünü göster";
+};
+// The hint fades once the person has been working inside the frame for a few seconds.
+$("wframebox").addEventListener("mouseenter", () => setTimeout(() => $("wscroll").classList.add("gone"), 4000));
+function renderWiz(s) {
+  const step = wizStep(s);
+  [...document.querySelectorAll("#wiz .steps li")].forEach((li, i) => li.className = i < step ? "done" : i === step ? "cur" : "");
+  let body = "", act = "";
+  if (step === 0 && !s.supported) {
+    body = `<h2>AugeLab Studio gerekli</h2><p>Fisoku fişleri bilgisayarınızdaki AugeLab Studio ile okur. Studio'yu <b>augelab.com</b> adresinden indirip kurun; kurulunca bu pencere kendiliğinden ilerler.</p>`;
+  } else if (step === 0 && ["downloading", "vcredist", "installing", "manual"].includes(s.phase)) {
+    // Sub-steps of "Studio'yu kur", ticked off as they finish.
+    const order = ["downloading", "vcredist", "installing"];
+    const at = s.phase === "manual" ? 2 : order.indexOf(s.phase);
+    const pct = s.total ? Math.round(100 * s.downloaded / s.total) : 0;
+    const dl = s.total ? `<div class="bar"><i style="width:${pct}%"></i></div><div class="wait-line">${esc(s.what)} · ${mb(s.downloaded)} / ${mb(s.total)} MB · %${pct}</div>` : "";
+    const mins = Math.floor(s.elapsed / 60), secs = String(s.elapsed % 60).padStart(2, "0");
+    const item = (i, text, extra = "") => `<li style="list-style:none; margin-left:-20px">${i < at ? "✓" : i === at ? "▶" : "○"} ${i === at ? `<b>${text}</b>` : text}${i === at ? extra : ""}</li>`;
+    body = `<h2>AugeLab Studio kuruluyor</h2>
+      <ol class="todo">
+        ${item(0, "AugeLab kurulum dosyasını indir", s.phase === "downloading" ? dl : "")}
+        ${item(1, "Visual C++ bileşenini kur (Microsoft)", s.phase === "vcredist" ? (dl || `<div class="wait-line"><span class="spin"></span>Kuruluyor. Windows izin sorarsa <b>Evet</b> deyin.</div>`) : "")}
+        ${item(2, s.phase === "manual" ? "AugeLab Studio'yu kurulum penceresinde kur" : "AugeLab Studio'yu kur (birkaç dakika sürer)",
+          `<div class="wait-line"><span class="spin"></span>${s.phase === "manual" ? "Kurulum penceresindeki adımları tamamlayın. " : ""}${mins}:${secs}</div>`)}
+      </ol>`;
+  } else if (step === 0) {
+    body = `<h2>AugeLab Studio kurulu değil</h2><p>Fisoku fişleri bu bilgisayardaki <b>AugeLab Studio</b> ile okur; fotoğraflar internete gönderilmez.</p>
+      <p>Fisoku, AugeLab Studio'yu (yaklaşık 36 MB) AugeLab'den indirip bu bilgisayara kuracak. Kurulum sürerken AugeLab hesabınızı bu pencerede oluşturabilirsiniz; Studio'yu etkinleştirmek için gerekli.</p>
+      ${s.error ? `<p class="err">${esc(s.error)}</p>` : ""}`;
+    act = (s.error && s.can_open_installer ? `<button class="btn" onclick="wizReopen()">Kurulum penceresini aç</button> ` : "")
+      + `<button class="btn primary" onclick="wizInstall()">${s.error ? "Tekrar dene" : "İndir ve kur"} →</button>`;
+  } else if (step === 1) {
+    body = `<h2>AugeLab Studio kurulu</h2><p>Studio şu an kapalı. Fişlerin okunması için açık olması gerekiyor.</p>`;
+    act = `<button class="btn primary" onclick="wizLaunch()">Studio'yu aç →</button>`;
+  } else if (step === 2) {
+    // Studio starts its MCP server by itself; the manual steps are only a fallback.
+    if (!step2Since) step2Since = Date.now();
+    const slow = Date.now() - step2Since > 90000;
+    body = `<h2>Studio'yu etkinleştirin</h2>
+      <p>Studio'nun <i>Verification Window</i> penceresine aşağıdaki AugeLab hesabınızdaki <b>doğrulama kodunu</b> girip <b>VERIFY</b>'a basın. Gerisini Fisoku yapar.</p>
+      <div class="wait-line"><span class="spin"></span>Studio'ya bağlanılması bekleniyor…</div>
+      ${slow ? `<p class="hint" style="margin-top:12px">Studio açıldı ama bağlantı gelmedi mi? Studio'da <kbd>AI Tools</kbd> → <kbd>AI Chat Window</kbd> → <kbd>Settings</kbd> → <kbd>MCP configuration</kbd> bölümünde <b>Enable MCP on startup</b> işaretli olsun ve <b>Start</b>'a basın.</p>` : ""}`;
+  } else {
+    body = `<h2>Hazır</h2><p>AugeLab Studio bağlı. Telefondan çektiğiniz fişler artık okunuyor; bekleyen fişler de sırayla işlenecek.</p>`;
+    act = `<button class="btn primary" onclick="wizClose()">Bitir</button>`;
+  }
+  $("wbody").innerHTML = body; $("wact").innerHTML = act;
+  renderAccount(step, s);
+  $("wlater").style.visibility = step === 3 ? "hidden" : "visible";
+}
+async function pollSetup() {
+  const s = await fetch("/api/setup").then((r) => r.json()).catch(() => null);
+  if (s) renderWiz(s);
+}
+function wizOpen() {
+  wizDismissed = false;
+  if (!$("wiz").open) $("wiz").showModal();
+  pollSetup(); clearInterval(setupTimer); setupTimer = setInterval(pollSetup, 1500);
+}
+function wizClose() { $("wiz").close(); clearInterval(setupTimer); }
+async function wizInstall() { await fetch("/api/setup/install", { method: "POST" }); pollSetup(); }
+async function wizReopen() { await fetch("/api/setup/reopen", { method: "POST" }); pollSetup(); }
+async function wizLaunch() { await fetch("/api/setup/launch", { method: "POST" }); pollSetup(); }
+$("wlater").onclick = () => { wizDismissed = true; wizClose(); };
+$("wizopen").onclick = wizOpen;
+function watchStudio(connected) {
+  offline = connected ? 0 : offline + 1;
+  $("wizopen").style.display = connected ? "none" : "";
+  // Give Studio a few seconds to answer before interrupting with the wizard.
+  if (!connected && offline >= 2 && !wizDismissed && !$("wiz").open && !$("dlg").open) wizOpen();
+}
+
+refresh(); setInterval(() => { if (!$("dlg").open && !$("wiz").open) refresh(); }, 2500);
+</script>
+</body>
+</html>

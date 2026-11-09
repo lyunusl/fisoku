@@ -1,0 +1,16 @@
+{
+  "seller_name": "DENEME KIRTASIYE",
+  "vkn": "4974650753",
+  "date": "2026-10-06",
+  "receipt_no": "1065",
+  "total": "763.42",
+  "total_vat": "57.56",
+  "vat_by_rate": {
+    "1": "4.40",
+    "20": "53.16"
+  },
+  "base_by_rate": {
+    "1": "440.01",
+    "20": "265.85"
+  }
+}

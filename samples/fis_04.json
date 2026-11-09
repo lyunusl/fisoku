@@ -1,0 +1,16 @@
+{
+  "seller_name": "ORNEK MARKET GIDA LTD. STI.",
+  "vkn": "1186252763",
+  "date": "2026-02-02",
+  "receipt_no": "9488",
+  "total": "1054.24",
+  "total_vat": "136.79",
+  "vat_by_rate": {
+    "1": "2.46",
+    "20": "134.33"
+  },
+  "base_by_rate": {
+    "1": "245.77",
+    "20": "671.68"
+  }
+}

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fisoku"
+version = "0.1.0"
+description = "Fiş/fatura okuma: telefonla çek, AugeLab Studio ile oku, KDV'yi Excel'e aktar."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+  "mcp>=1.9",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "python-multipart>=0.0.9",
+  "segno>=1.6",
+  "openpyxl>=3.1",
+  "pillow>=10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pyinstaller>=6"]
+
+[project.scripts]
+fisoku = "fisoku.app:main"
+
+[tool.setuptools]
+packages = ["fisoku"]
+
+[tool.setuptools.package-data]
+fisoku = ["web/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
