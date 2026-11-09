@@ -26,6 +26,19 @@ def test_find_studio_registry_folder(tmp_path, monkeypatch):
     assert studio_setup.find_studio() == other / studio_setup.EXE_NAME
 
 
+def test_existing_installation_never_starts_an_installer(tmp_path, monkeypatch):
+    setup = studio_setup.StudioSetup()
+    setup.installer = tmp_path / "cached-installer.exe"
+    setup.installer.touch()
+    monkeypatch.setattr(studio_setup, "find_studio", lambda: tmp_path / studio_setup.EXE_NAME)
+    monkeypatch.setattr(studio_setup, "studio_running", lambda: False)
+
+    assert setup.state()["installed"] is True
+    assert setup.start_install() is False
+    assert setup.open_installer() is False
+    assert setup.phase == "idle"
+
+
 class FakeSetup(studio_setup.StudioSetup):
     def __init__(self):
         super().__init__()

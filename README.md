@@ -33,11 +33,11 @@ Her şey kendi bilgisayarında çalışır. Fişler buluta gönderilmez.
 
 İnternet gerekmez; OCR motoru Fisoku.exe'nin içinde gelir.
 
-Studio kurulu değilse Fisoku panelinde bir kurulum sihirbazı açılır:
+Fisoku Studio'ya bağlanamazsa panelde bir sihirbaz açılır. Studio zaten kuruluysa sihirbaz doğrudan açma veya bağlantı adımına geçer.
 
-1. **Studio'yu kur**: Fisoku, AugeLab'in resmi kurulum dosyasını (yaklaşık 36 MB) indirir. Visual C++ bileşeni eksikse onu Microsoft'tan indirir, Microsoft imzasını doğrular ve kurar. Ardından Studio'yu standart klasöre kurar. Bu sürede AugeLab hesap sayfası sihirbazın içinde açık kalır; hesabınızı orada oluşturabilirsiniz. Otomatik kurulum olmazsa Studio'nun kendi kurulum penceresi açılabilir.
+1. **Studio'yu kur**: Fisoku, AugeLab'in resmi kurulum dosyasını (yaklaşık 36 MB) indirir. Visual C++ bileşeni eksikse onu Microsoft'tan indirir, Microsoft imzasını doğrular ve kurar. Ardından Studio'yu standart klasöre kurar. Bu sürede AugeLab hesabınız yoksa hesap sayfası sihirbazın içinde açık kalır; hesabınız varsa **Hesabım var** ile geçersiniz. Otomatik kurulum olmazsa Studio'nun kendi kurulum penceresi açılabilir.
 2. **Studio'yu aç**: kurulumdan sonra Fisoku Studio'yu başlatır.
-3. **Etkinleştir**: Studio'nun doğrulama penceresine AugeLab hesabınızdaki doğrulama kodunu siz girersiniz (hesap sayfası sihirbazın içinde açıktır). Studio'nun MCP arayüzü varsayılan olarak kendiliğinden başlar; başlamazsa sihirbaz *AI Tools → AI Chat Window → Settings → MCP configuration → Start* adımını gösterir.
+3. **Studio'ya bağlan**: Studio genelde kendiliğinden bağlanır. Studio lisans kodu isterse sihirbazdaki **Lisans kodumu al** düğmesi AugeLab hesabınızı ayrı bir pencerede açar; mevcut hesabınızla (Google, Microsoft ya da e-posta) giriş yapıp kodu Studio'ya girersiniz. Studio açık olduğu halde 20 saniyede bağlantı gelmezse sihirbaz *AI Tools → AI Chat Window → Settings → MCP configuration → Start* adımını gösterir.
 4. **Hazır**: Fisoku Studio'ya bağlanır. Bu sırada çekilen fişler de sırayla okunur.
 
 İnternet yalnızca bu ilk Studio kurulumunda gerekir.

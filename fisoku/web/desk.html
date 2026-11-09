@@ -191,10 +191,10 @@
 </div></dialog>
 
 <dialog id="wiz" class="wiz"><div class="in">
-  <ol class="steps"><li>Studio'yu kur</li><li>Studio'yu aç</li><li>Etkinleştir</li><li>Hazır</li></ol>
+  <ol class="steps"><li>Studio'yu kur</li><li>Studio'yu aç</li><li>Studio'ya bağlan</li><li>Hazır</li></ol>
   <div id="wbody"></div>
   <div id="wacct" class="acct" hidden>
-    <div class="acct-head"><span id="wacctmsg"></span><span class="links"><button class="linkbtn" id="wtop" type="button">Sayfanın üstünü göster</button><a id="wacctlink" target="_blank" rel="noopener">Yeni pencerede aç ↗</a></span></div>
+    <div class="acct-head"><span id="wacctmsg"></span><span class="links"><button class="btn small" id="whave" type="button">Hesabım var</button><button class="linkbtn" id="wtop" type="button">Sayfanın üstünü göster</button><a id="wacctlink" target="_blank" rel="noopener">Yeni pencerede aç ↗</a></span></div>
     <div class="frame" id="wframebox"><iframe id="wframe" title="AugeLab hesabı"></iframe><div class="scrollhint" id="wscroll">Formun devamı için çerçevede aşağı kaydırın ↓</div></div>
   </div>
   <div class="foot"><button class="btn small" id="wlater">Sonra</button><span id="wact"></span></div>
@@ -346,6 +346,8 @@ drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("hover"); uploa
 
 // ---- AugeLab Studio setup wizard: shown while Fisoku cannot reach Studio.
 let wizDismissed = false, offline = 0, setupTimer = null, step2Since = 0;
+let hasAccount = false;
+try { hasAccount = localStorage.getItem("fisoku.hasAccount") === "1"; } catch {}
 const mb = (b) => (b / 1048576).toFixed(1).replace(".", ",");
 function wizStep(s) {
   if (s.connected) return 3;
@@ -354,25 +356,34 @@ function wizStep(s) {
   return s.running ? 2 : 1;
 }
 const ACCOUNT = "https://account.augelab.com/";
-// AugeLab's own account page inside the wizard: sign up while Studio downloads and installs,
-// then come back to it for the licence code. The frame keeps its page across re-renders.
+// AugeLab's sign-up page inside the wizard while Studio downloads and installs. Signing in to an
+// existing account never happens in this frame: Google/Microsoft sign-in refuse frames and a
+// frame's session does not carry over, so the licence code is fetched in a real window instead.
 function renderAccount(step, s) {
   const during = step === 0 && ["downloading", "vcredist", "installing", "manual"].includes(s.phase);
-  const show = s.supported && (during || step === 2);
+  const show = s.supported && during && !hasAccount;
   $("wacct").hidden = !show;
   $("wiz").classList.toggle("wide", show);
   if (!show) return;
-  const url = step === 2 ? ACCOUNT : ACCOUNT + "?p=signup";
+  const url = ACCOUNT + "?p=signup";
   if ($("wframe").dataset.url !== url) {
     $("wframe").src = url; $("wframe").dataset.url = url;
     $("wframebox").classList.remove("full"); $("wtop").textContent = "Sayfanın üstünü göster";
     $("wscroll").classList.remove("gone");
   }
   $("wacctlink").href = url;
-  $("wacctmsg").innerHTML = step === 2
-    ? "<b>Lisans kodunuz AugeLab hesabınızda.</b> Giriş yapıp kodu Studio'ya girin."
-    : "<b>Kurulum sürerken AugeLab hesabınızı oluşturun.</b> Studio'yu etkinleştirmek için gerekli.";
+  $("wacctmsg").innerHTML = "<b>AugeLab hesabınız yoksa kurulum sürerken burada oluşturun.</b> Studio'yu etkinleştirmek için gerekli.";
 }
+/** The licence code lives in the AugeLab account: open it as a real window so any sign-in works. */
+function openAccount() {
+  const w = window.open(ACCOUNT, "augelab-hesap", "width=560,height=820");
+  if (!w) window.open(ACCOUNT, "_blank");
+}
+$("whave").onclick = () => {
+  hasAccount = true;
+  try { localStorage.setItem("fisoku.hasAccount", "1"); } catch {}
+  pollSetup();
+};
 $("wtop").onclick = () => {
   const full = $("wframebox").classList.toggle("full");
   $("wtop").textContent = full ? "Formu öne getir" : "Sayfanın üstünü göster";
@@ -402,7 +413,7 @@ function renderWiz(s) {
       </ol>`;
   } else if (step === 0) {
     body = `<h2>AugeLab Studio kurulu değil</h2><p>Fisoku fişleri bu bilgisayardaki <b>AugeLab Studio</b> ile okur; fotoğraflar internete gönderilmez.</p>
-      <p>Fisoku, AugeLab Studio'yu (yaklaşık 36 MB) AugeLab'den indirip bu bilgisayara kuracak. Kurulum sürerken AugeLab hesabınızı bu pencerede oluşturabilirsiniz; Studio'yu etkinleştirmek için gerekli.</p>
+      <p>Fisoku, AugeLab Studio'yu (yaklaşık 36 MB) AugeLab'den indirip bu bilgisayara kuracak. AugeLab hesabınız yoksa kurulum sürerken bu pencerede oluşturabilirsiniz; varsa mevcut hesabınızı kullanırsınız.</p>
       ${s.error ? `<p class="err">${esc(s.error)}</p>` : ""}`;
     act = (s.error && s.can_open_installer ? `<button class="btn" onclick="wizReopen()">Kurulum penceresini aç</button> ` : "")
       + `<button class="btn primary" onclick="wizInstall()">${s.error ? "Tekrar dene" : "İndir ve kur"} →</button>`;
@@ -410,13 +421,17 @@ function renderWiz(s) {
     body = `<h2>AugeLab Studio kurulu</h2><p>Studio şu an kapalı. Fişlerin okunması için açık olması gerekiyor.</p>`;
     act = `<button class="btn primary" onclick="wizLaunch()">Studio'yu aç →</button>`;
   } else if (step === 2) {
-    // Studio starts its MCP server by itself; the manual steps are only a fallback.
+    // Studio usually connects on its own; the licence code is only needed if Studio asks for it,
+    // and the MCP switch is only a fallback when it stays quiet.
     if (!step2Since) step2Since = Date.now();
-    const slow = Date.now() - step2Since > 90000;
-    body = `<h2>Studio'yu etkinleştirin</h2>
-      <p>Studio'nun <i>Verification Window</i> penceresine aşağıdaki AugeLab hesabınızdaki <b>doğrulama kodunu</b> girip <b>VERIFY</b>'a basın. Gerisini Fisoku yapar.</p>
+    const slow = Date.now() - step2Since > 20000;
+    body = `<h2>Studio'ya bağlan</h2>
       <div class="wait-line"><span class="spin"></span>Studio'ya bağlanılması bekleniyor…</div>
-      ${slow ? `<p class="hint" style="margin-top:12px">Studio açıldı ama bağlantı gelmedi mi? Studio'da <kbd>AI Tools</kbd> → <kbd>AI Chat Window</kbd> → <kbd>Settings</kbd> → <kbd>MCP configuration</kbd> bölümünde <b>Enable MCP on startup</b> işaretli olsun ve <b>Start</b>'a basın.</p>` : ""}`;
+      <ol class="todo" style="margin-top:14px">
+        <li><b>Studio lisans kodu istiyorsa</b> (<i>Verification Window</i>): aşağıdaki düğmeyle AugeLab hesabınıza giriş yapın (Google, Microsoft ya da e-posta), kodu kopyalayıp Studio'daki pencereye yapıştırın ve <b>VERIFY</b>'a basın.
+          <div style="margin-top:8px"><button class="btn primary" onclick="openAccount()">Lisans kodumu al ↗</button></div></li>
+        ${slow ? `<li><b>Studio ana ekranı açık ama bağlantı gelmediyse:</b> <kbd>AI Tools</kbd> → <kbd>AI Chat Window</kbd> → <kbd>Settings</kbd> → <kbd>MCP configuration</kbd> bölümünde <b>Enable MCP on startup</b> işaretli olsun ve <b>Start</b>'a basın.</li>` : ""}
+      </ol>`;
   } else {
     body = `<h2>Hazır</h2><p>AugeLab Studio bağlı. Telefondan çektiğiniz fişler artık okunuyor; bekleyen fişler de sırayla işlenecek.</p>`;
     act = `<button class="btn primary" onclick="wizClose()">Bitir</button>`;

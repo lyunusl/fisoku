@@ -200,7 +200,7 @@ class StudioSetup:
 
     def start_install(self) -> bool:
         with self.lock:
-            if self._busy():
+            if self._busy() or find_studio():
                 return False
             self.phase, self.error, self.done_bytes, self.total_bytes = "downloading", "", 0, 0
         threading.Thread(target=self._install, daemon=True, name="fisoku-setup").start()
@@ -209,7 +209,7 @@ class StudioSetup:
     def open_installer(self) -> bool:
         """Fallback: AugeLab's installer with its own window; Fisoku waits for the result."""
         with self.lock:
-            if self._busy() or not self.installer.is_file():
+            if self._busy() or find_studio() or not self.installer.is_file():
                 return False
             self.phase, self.error = "manual", ""
         threading.Thread(target=self._manual, daemon=True, name="fisoku-setup").start()
